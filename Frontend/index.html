@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <title>Pagination</title>
+    <style>
+        *{
+            box-sizing: border-box;
+        }
+        body{
+            background-color: #444;
+        }
+        h1{
+            width: 100%;
+            color: whitesmoke;
+            text-align: center;
+        }
+        #products{
+            margin: auto;
+            max-width: 80%;
+            display: flex;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            order: 1;
+        }
+        .card{
+            max-width: 300px;
+            border: 1px solid white;
+            border-radius: 1em;
+            padding: 3em 1em;
+            margin: 1em;
+        }
+        .card-header{
+            color: aqua;
+            font-size: 1.5rem;
+        }
+        .product-description{
+            color: white;
+            font-style: italic;
+            font-size: 1.125em;
+        }
+        .product-count{
+            color: white;
+        }
+        .search{
+            margin: auto;
+            width: 70%;
+            font-size: 2em;
+            color: #0f0;
+        }
+        #range{
+            display: none;
+        }
+        .range-button{
+            border: none;
+            border-radius: .125em;
+            font-size: 1em;
+            background-color: #555;
+            color: white;
+        }
+        .range-button:hover{
+            cursor: pointer;
+            background-color: #222;
+        }
+        .range-button-active{
+            background-color: #222;
+
+        }
+        .search{
+            display: flex;
+            width: 70%;
+            justify-content: space-between;
+        }
+        #search{
+            font-size: .75em;
+            cursor: pointer;
+        }
+        #pages{
+            width: 80%;
+            margin: auto;
+        }
+        .page-button{
+            font-size: 1em;
+            margin: 1em .5em;
+            padding: 1em;
+            background-color: transparent;
+            border-radius: 1em;
+            color: #0f0;
+            border-color: salmon;
+        }
+        .page-button-active, .page-button:hover{
+            cursor: pointer;
+            border-color: orange;
+            border-width: 3px;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Paggination</h1>
+    <div class="search">
+        <div class="range">
+            <label for="from">Rage</label>
+            <button class="range-button range-button-active" value="5" onclick="SetRange(event)">5</button>
+            <button class="range-button" value="10" onclick="SetRange(event)">10</button>
+            <button class="range-button" value="15" onclick="SetRange(event)">15</button>
+        </div>
+        <div>
+            <button id="search" onclick="Search(event)">search</button>
+        </div>
+    </div>
+    <div id="products" class="content">
+    </div>
+    <div id="pages"></div>
+    <script>
+
+        function AppendProducts(products){
+            const container = document.body.getElementsByClassName("content")
+            //Clean container
+            container[0].innerHTML = "";
+            // Append 
+            for(let product of products)
+            {
+                const card = document.createElement('div');
+                    card.classList.add('card')
+
+                const header = document.createElement('h2');
+                    header.classList.add('card-header')
+                    header.append(product.name)
+                
+                const description = document.createElement('p');
+                    description.classList.add('product-description')
+                    description.append(product.description)
+
+                const count = document.createElement('p');
+                    count.classList.add('product-count')
+                    count.append("Product count : "+product.count)
+
+                const body = document.createElement('div')
+                    body.classList.add('card-body');
+                    body.appendChild(description);
+                    body.appendChild(count);
+
+                card.appendChild(header)
+                card.appendChild(body)
+                container[0].appendChild(card)
+            }
+        }
+
+        function SetRange(event)
+        {
+            //Remove active-button class if one of them was clicked
+            const rangeButtons = document.getElementsByClassName('range-button');
+            
+            for(let item of rangeButtons)
+            {
+                item.classList.remove('range-button-active')
+            }
+
+            // Set active class to clicked range button
+            const clikedButton = event.target;
+            clikedButton.classList.add('range-button-active')
+        }
+        
+        function RenderSitesButtons(currentSite,totalSites){
+            var buttonsContainer = document.getElementById("pages")
+            buttonsContainer.innerHTML = "";
+
+            var currentPage = parseInt(currentSite,10);
+            var totalPages = parseInt(totalSites,10)
+
+            for(let i = currentSite - 1; i <= totalSites; i++)
+            {
+                if(i != 0 && (i <= parseInt(currentSite,10) +1  || i >= totalSites - 1))
+                {
+                    var button = document.createElement('button')
+                    button.classList.add('page-button')
+                    button.addEventListener('click',function(event){
+                        NextPage(event)
+                    })
+                        button.value = i;
+                        button.innerHTML = i;
+                        buttonsContainer.appendChild(button)
+                        if(i == currentSite){
+                            button.classList.add('page-button-active')
+                        }
+                }
+            }
+        }
+
+        function RenderProducts(currentPage,range){
+            $.ajax({
+                type: 'POST',
+                contentType:'application/json',
+                url: 'http://localhost:5004/getRange',
+                data: JSON.stringify({
+                    "range": range,
+                    "page" : currentPage
+                })
+            }).then(function(data){
+                var productsArray = data.products;
+                totalSites = data.totalSites;
+                AppendProducts(productsArray)
+                RenderSitesButtons(currentPage,totalSites)
+            });
+        }
+
+        function SelectPage(event){
+            console.log(event)
+            const pageButtons = document.getElementsByClassName('page-button');
+            
+            for(let item of pageButtons){
+                item.classList.remove('page-button-active')
+            }
+
+            event.target.classList.add('page-button-active')
+        }
+
+        function Search(event){
+            const currentRange = document.getElementsByClassName('range-button-active')
+            RenderProducts(1,currentRange[0].value)
+        }
+
+        function NextPage(event){
+            const page = event.target.value;
+            const currentRange = document.getElementsByClassName('range-button-active')
+            RenderProducts(page,currentRange[0].value)
+        }
+
+        $(document).ready(function(){
+            const currentRange = document.getElementsByClassName('range-button-active')[0].value;
+            const range = currentRange[0].value;
+
+            RenderProducts(1,currentRange)
+        })
+
+    </script>
+
+</body>
+</html>
